@@ -67,7 +67,7 @@ class FatTree:
             raise ValueError("k must be a positive even integer (got %r)" % (k,))
         self.k = k
         self.half = k // 2
-        self.G = nx.Graph()
+        self.G = nx.Graph() # undirected graph, since the fat-tree is symmetric and bidirectional
         self._build()
 
     # ------------------------------------------------------------------ build
