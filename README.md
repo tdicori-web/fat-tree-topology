@@ -229,14 +229,55 @@ a reference design for large data center fabrics.
 
 ---
 
-## 7. Reproducibility and AI usage
+## 7. Tuning the experiments and expected effects
+
+The topology generator `fattree.py` is fully parameterised through its command line
+(`--k`, `--failure`, `--seed`), so a topology of any even `k` can be generated and
+inspected without editing code. The experiment driver `experiment.py` instead reads a
+small configuration block at the top of `main()`, which the user is meant to adjust to
+trade accuracy and scope against running time:
+
+```python
+k_sweep       = [4, 8, 16]                                   # which network sizes to compare
+failure_rates = [round(0.025 * i, 3) for i in range(0, 13)]  # x-axis: 0% .. 30%
+trials        = 15                                           # Monte Carlo repetitions
+sample_pairs  = 300                                          # host pairs sampled per metric
+```
+
+Each parameter affects the resulting plots in a predictable way:
+
+- **`sample_pairs`** controls the sampling noise *within* a single trial. Each metric
+  value is an average over this many randomly chosen host pairs, so raising it (e.g. to
+  1000) makes every plotted point a more faithful estimate of the true population
+  average and produces visibly **smoother, less jagged curves**. Cost grows linearly.
+- **`trials`** controls the Monte Carlo averaging *across* random failure patterns. The
+  solid line is the mean over trials and the shaded band is ± one standard deviation, so
+  raising it (e.g. to 50) yields a **more stable mean and a more trustworthy band**; the
+  uncertainty of the mean itself shrinks as `1/sqrt(trials)`. The band reflects the
+  genuine variability between failure patterns and does not vanish — it is estimated
+  more precisely. Cost grows linearly.
+- **`failure_rates`** sets the resolution and range of the x-axis. A finer step (e.g.
+  `0.01`) gives higher resolution; a wider range (e.g. up to `0.60`) reveals **where
+  connectivity eventually collapses**, which for small `k` happens beyond the default
+  30% window. Cost grows linearly in the number of points.
+- **`k_sweep`** chooses which network sizes are overlaid. Adding `24` or `32` makes the
+  scaling trends clearer, but the cost of each added value grows roughly as `k^3`
+  (the graph has `Θ(k^3)` nodes and edges), so large `k` is expensive.
+
+As a rule of thumb the total work is proportional to
+`len(failure_rates) × trials × sample_pairs × k^3`. Because `k = 4` and `k = 8` are
+cheap, `trials` and `sample_pairs` can be raised freely there to smooth the noisier
+small-`k` curves, whereas `k = 16` and above should be scaled with care. All randomness
+is driven by `--seed`, so any chosen configuration reproduces identically across runs.
+
+---
+
+## 8. Reproducibility
 
 Every experiment is driven by an explicit random seed, so the figures in this README
-can be regenerated exactly with `python experiment.py`. AI assistance was used during
-development, consistent with the course policy; the author has reviewed and
-understands the entire implementation and is responsible for all submitted content.
+can be regenerated exactly with `python experiment.py`. 
 
-## 8. Reference
+## 9. Reference
 
 [1] M. Al-Fares, A. Loukissas, and A. Vahdat, "A scalable, commodity data center
 network architecture," *SIGCOMM Comput. Commun. Rev.*, vol. 38, no. 4, pp. 63–74,
